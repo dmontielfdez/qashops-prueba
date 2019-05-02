@@ -1,13 +1,6 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: David
- * Date: 02/05/2019
- * Time: 20:44
- */
 
 namespace app\models;
-
 
 class Product
 {
@@ -20,33 +13,19 @@ class Product
     )
     {
         try {
-            if ($cache) {
-                $blockedStockQuantityInOrders = OrderLine::getDb()->cache(function ($db) use ($productId) {
-                    return (new self)->getBlockedStockQuantityInOrders($productId);
-                }, $cacheDuration);
-                $blockedStockQuantity = BlockedStock::getDb()->cache(function ($db) use ($productId) {
-                    return (new self)->getBlockedStockQuantity($productId);
-                }, $cacheDuration);
-            } else {
-                $blockedStockQuantityInOrders = (new self)->getBlockedStockQuantityInOrders($productId);
-                $blockedStockQuantity = (new self)->getBlockedStockQuantity($productId);
-            }
+
+            $blockedStockQuantityInOrders = self::blockedStockQuantityInOrders($productId, $cache, $cacheDuration);
+            $blockedStockQuantity = self::blockedStockQuantity($productId, $cache, $cacheDuration);
 
             // Units available
-            if (isset($blockedStockQuantityInOrders) || isset($blockedStockQuantity)) {
-                if ($quantityAvailable >= 0) {
-                    $quantityAvailableTemp = $quantityAvailable - $blockedStockQuantityInOrders - $blockedStockQuantity;
-                    return (new self)->getQuantityAvailableTemp($quantityAvailableTemp, $securityStockConfig);
-                } elseif ($quantityAvailable < 0) {
-                    return $quantityAvailable;
+            if ($quantityAvailable >= 0) {
+                if (isset($blockedStockQuantityInOrders) || isset($blockedStockQuantity)) {
+                    $quantityAvailable = $quantityAvailable - $blockedStockQuantityInOrders - $blockedStockQuantity;
                 }
-            } else {
-                if ($quantityAvailable >= 0) {
-                    return(new self)->getQuantityAvailableTemp($quantityAvailable, $securityStockConfig);
-                }
-                return $quantityAvailable;
+                return self::quantityAvailableTemp($quantityAvailable, $securityStockConfig);
             }
-            return 0;
+            return $quantityAvailable;
+
         } catch (\Exception $e) {
             return $e;
         }
@@ -54,56 +33,80 @@ class Product
     }
 
     /**
-     * Return blocked stock quantity in orders in process
-     *
+     * @param string $productId, bool $cache, int $cacheDuracion
+     * @return integer $blockedStockQuantityInOrders
+     */
+    private static function blockedStockQuantityInOrders($productId, $cache, $cacheDuration)
+    {
+        if ($cache) {
+            return OrderLine::getDb()->cache(
+                function ($db) use ($productId, $cache, $cacheDuration) {
+                    return self::blockedStockQuantityInOrdersQuery($productId, $cache, $cacheDuration);
+                },
+                $cacheDuration);
+        }
+        return self::blockedStockQuantityInOrdersQuery($productId, $cache, $cacheDuration);
+
+    }
+
+    /**
      * @param string $productId
      * @return integer $blockedStockQuantityInOrders
      */
-    public function getBlockedStockQuantityInOrders($productId)
+    private static function blockedStockQuantityInOrdersQuery($productId)
     {
-        $blockedStockQuantityInOrders = OrderLine::find()->select('SUM(quantity) as quantity')
+        return OrderLine::find()->select('SUM(quantity) as quantity')
             ->joinWith('order')
-            ->where("(order.status = '" . Order::STATUS_PENDING . "' OR order.status = '" . Order::STATUS_PROCESSING . "' OR order.status = '" . Order::STATUS_WAITING_ACCEPTANCE . "') AND order_line.product_id = $productId")
+            ->where("(order.status = '" . Order::STATUS_PENDING . "' OR order.status = '" . Order::STATUS_PROCESSING . "' OR order.status = '"
+                . Order::STATUS_WAITING_ACCEPTANCE . "') AND order_line.product_id = $productId")
             ->scalar();
 
-        return $blockedStockQuantityInOrders;
     }
 
     /**
-     * Return blocked stock quantity
-     *
+     * @param string $productId, bool $cache, int $cacheDuracion
+     * @return integer $blockedStockQuantity
+     */
+    private static function blockedStockQuantity($productId, $cache, $cacheDuration)
+    {
+        if ($cache) {
+            return OrderLine::getDb()->cache(
+                function ($db) use ($productId, $cache, $cacheDuration) {
+                    return self::blockedStockQuantityQuery($productId, $cache, $cacheDuration);
+                },
+                $cacheDuration);
+        }
+        return self::blockedStockQuantityQuery($productId, $cache, $cacheDuration);
+    }
+
+    /**
      * @param string $productId
      * @return integer $blockedStockQuantity
      */
-    public function getBlockedStockQuantity($productId)
+    private static function blockedStockQuantityQuery($productId)
     {
-        $blockedStockQuantity = BlockedStock::find()->select('SUM(quantity) as quantity')
+        return BlockedStock::find()->select('SUM(quantity) as quantity')
             ->joinWith('shoppingCart')
-            ->where("blocked_stock.product_id = $productId AND blocked_stock_to_date > '" . date('Y-m-d H:i:s') . "' AND (shopping_cart_id IS NULL OR shopping_cart.status = '" . ShoppingCart::STATUS_PENDING . "')")
+            ->where("blocked_stock.product_id = $productId AND blocked_stock_to_date > '" . date('Y-m-d H:i:s') . "' AND (shopping_cart_id IS NULL OR shopping_cart.status = '"
+                . ShoppingCart::STATUS_PENDING . "')")
             ->scalar();
-
-        return $blockedStockQuantity;
     }
 
     /**
-     * Return blocked stock quantity
-     *
      * @param string $productId
-     * @return integer $blockedStockQuantity
+     * @return integer $quantity
      */
-    public function getQuantityAvailableTemp($quantityAvailableTemp, $securityStockConfig)
+    private static function quantityAvailableTemp($quantityAvailableTemp, $securityStockConfig)
     {
-        $quantityAvailableTemp = $this->setApplySecurityStockConfig($quantityAvailableTemp, $securityStockConfig);
+        $quantityAvailableTemp = self::applySecurityStockConfig($quantityAvailableTemp, $securityStockConfig);
         return $quantityAvailableTemp > 0 ? $quantityAvailableTemp : 0;
     }
 
     /**
-     * Apply Securiry Stock Config
-     *
      * @param string $productId
-     * @return integer $blockedStockQuantity
+     * @return integer $quantity
      */
-    public function setApplySecurityStockConfig($quantity, $securityStockConfig)
+    private static function applySecurityStockConfig($quantity, $securityStockConfig)
     {
         if (!empty($securityStockConfig)) {
             $quantity = ShopChannel::applySecurityStockConfig(
