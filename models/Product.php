@@ -13,7 +13,6 @@ class Product
     )
     {
         try {
-
             $blockedStockQuantityInOrders = self::blockedStockQuantityInOrders($productId, $cache, $cacheDuration);
             $blockedStockQuantity = self::blockedStockQuantity($productId, $cache, $cacheDuration);
 
