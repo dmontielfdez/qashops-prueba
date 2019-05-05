@@ -19,7 +19,7 @@ class XmlReader
         try {
             $xml = new SimpleXMLElement(__DIR__ . $path_xml, 0, true);
 
-            $data = (array());
+            $data = array();
             // 1º Recorro los elementos para buscar todas las cabeceras
             $headersCsv = array();
             foreach ($xml->products->product as $product) {

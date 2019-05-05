@@ -24,6 +24,6 @@ class FlattenXmlService
         $xmlConverted = $xmlReader->flatten($path_xml);
 
         $csvWriter = new CsvWriter();
-        return $csvWriter->convert($xmlConverted);
+        return $csvWriter->write($xmlConverted, "flatten_csv", ";");
     }
 }
