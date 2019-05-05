@@ -36,17 +36,16 @@ $this->title = 'QaShops - Prueba técnica';
                 </p>
             </div>
             <div class="col-lg-4">
-                <h2>Heading</h2>
+                <h2>Ejercicio 3 - Merge de 2 CSV</h2>
 
-                <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore
-                    et
-                    dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
-                    aliquip
-                    ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum
-                    dolore eu
-                    fugiat nulla pariatur.</p>
+                <p>Se ha creado un controlador que llama a un servicio para unir los 2 CSV.</p>
 
-                <p><a class="btn btn-default" href="http://www.yiiframework.com/extensions/">Yii Extensions &raquo;</a>
+                <p>
+                    <a href="/ejercicio3">
+                        <button class="btn btn-success">
+                            Ver resultado &raquo;
+                        </button>
+                    </a>
                 </p>
             </div>
         </div>

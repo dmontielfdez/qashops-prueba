@@ -7,21 +7,21 @@ use app\infrastructure\exceptions\CsvWriterException;
 class CsvWriter
 {
     /**
-     * Escribe un archivo csv en el directorio con nombre output.csv
+     * Escribe un archivo csv
      *
-     * @param  array $arrayToConvert Array para convertir
+     * @param  array $array Array para convertir
      * @return string Ruta del fichero csv convertido
      * @throws CsvWriterException Excepcion de CsvWriterException
      */
-    public function convert($arrayToConvert)
+    public function write($array, $nameFile, $delimiter)
     {
         try {
 
-            $file = __DIR__ . '/output.csv';
+            $file = __DIR__ . '/'.$nameFile.'.csv';
 
             $fp = fopen($file, 'w');
-            foreach ($arrayToConvert as $values) {
-                fputcsv($fp, $values, ";");
+            foreach ($array as $values) {
+                fputcsv($fp, $values, $delimiter);
             }
 
             fclose($fp);
